@@ -22,11 +22,9 @@ class HyperParamModel(object):
         bc_max_evals = self.spark_context.broadcast(max_evals)
 
         hyperas_worker = HyperasWorker(bc_model, bc_max_evals)
-        dummy_rdd = self.spark_context.parallelize([i for i in range(1, 1000)])
+        dummy_rdd = self.spark_context.parallelize(list(range(1, 1000)))
         dummy_rdd = dummy_rdd.repartition(self.num_workers)
-        trials_list = dummy_rdd.mapPartitions(hyperas_worker.minimize).collect()
-
-        return trials_list
+        return dummy_rdd.mapPartitions(hyperas_worker.minimize).collect()
 
     def minimize(self, model, data, max_evals):
         trials_list = self.compute_trials(model, data, max_evals)

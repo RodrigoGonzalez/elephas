@@ -11,8 +11,7 @@ def to_data_frame(sc, features, labels, categorical=False):
     '''
     lp_rdd = to_labeled_point(sc, features, labels, categorical)
     sql_context = SQLContext(sc)
-    df = sql_context.createDataFrame(lp_rdd)
-    return df
+    return sql_context.createDataFrame(lp_rdd)
 
 
 def from_data_frame(df, categorical=False, nb_classes=None):

@@ -11,7 +11,7 @@ def to_simple_rdd(sc, features, labels):
     Convert numpy arrays of features and labels into
     an RDD of pairs.
     '''
-    pairs = [(x, y) for x, y in zip(features, labels)]
+    pairs = list(zip(features, labels))
     return sc.parallelize(pairs)
 
 
@@ -61,7 +61,11 @@ def lp_to_simple_rdd(lp_rdd, categorical=False, nb_classes=None):
         if not nb_classes:
             labels = np.asarray(lp_rdd.map(lambda lp: lp.label).collect(), dtype='int32')
             nb_classes = np.max(labels)+1
-        rdd = lp_rdd.map(lambda lp: (from_vector(lp.features), encode_label(lp.label, nb_classes)))
+        return lp_rdd.map(
+            lambda lp: (
+                from_vector(lp.features),
+                encode_label(lp.label, nb_classes),
+            )
+        )
     else:
-        rdd = lp_rdd.map(lambda lp: (from_vector(lp.features), lp.label))
-    return rdd
+        return lp_rdd.map(lambda lp: (from_vector(lp.features), lp.label))

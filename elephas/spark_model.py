@@ -30,8 +30,7 @@ def get_server_weights(master_url='localhost:5000'):
     request = urllib2.Request('http://{0}/parameters'.format(master_url),
                               headers={'Content-Type': 'application/elephas'})
     ret = urllib2.urlopen(request).read()
-    weights = pickle.loads(ret)
-    return weights
+    return pickle.loads(ret)
 
 
 def put_deltas_to_server(delta, master_url='localhost:5000'):
@@ -63,10 +62,7 @@ class SparkModel(object):
             custom_objects = {}
         if master_metrics is None:
             master_metrics = ["accuracy"]
-        if optimizer is None:
-            self.optimizer = default_optimizer()
-        else:
-            self.optimizer = optimizer
+        self.optimizer = default_optimizer() if optimizer is None else optimizer
         self.mode = mode
         self.frequency = frequency
         self.num_workers = num_workers
@@ -83,27 +79,25 @@ class SparkModel(object):
         '''
         Get URL of parameter server, running on master
         '''
-        master_url = socket.gethostbyname(socket.gethostname()) + ':5000'
-        return master_url
+        return f'{socket.gethostbyname(socket.gethostname())}:5000'
 
     def get_train_config(self, nb_epoch, batch_size,
                          verbose, validation_split):
         '''
         Get configuration of training parameters
         '''
-        train_config = {}
-        train_config['nb_epoch'] = nb_epoch
-        train_config['batch_size'] = batch_size
-        train_config['verbose'] = verbose
-        train_config['validation_split'] = validation_split
-        return train_config
+        return {
+            'nb_epoch': nb_epoch,
+            'batch_size': batch_size,
+            'verbose': verbose,
+            'validation_split': validation_split,
+        }
 
     def get_config(self):
         '''
         Get configuration of model parameters
         '''
-        model_config = {}
-        model_config['model'] = self.master_network.get_config()
+        model_config = {'model': self.master_network.get_config()}
         model_config['optimizer'] = self.optimizer.get_config()
         model_config['mode'] = self.mode
         return model_config
@@ -249,8 +243,7 @@ class SparkWorker(object):
         if x_train.shape[0] > self.train_config.get('batch_size'):
             model.fit(x_train, y_train, **self.train_config)
         weights_after_training = model.get_weights()
-        deltas = subtract_params(weights_before_training, weights_after_training)
-        yield deltas
+        yield subtract_params(weights_before_training, weights_after_training)
 
 
 class AsynchronousSparkWorker(object):
@@ -291,7 +284,7 @@ class AsynchronousSparkWorker(object):
         batches = [(i*batch_size, min(nb_train_sample, (i+1)*batch_size)) for i in range(0, nb_batch)]
 
         if self.frequency == 'epoch':
-            for epoch in range(nb_epoch):
+            for _ in range(nb_epoch):
                 weights_before_training = get_server_weights(self.master_url)
                 model.set_weights(weights_before_training)
                 self.train_config['nb_epoch'] = 1
@@ -302,7 +295,7 @@ class AsynchronousSparkWorker(object):
                 put_deltas_to_server(deltas, self.master_url)
         elif self.frequency == 'batch':
             from keras.engine.training import slice_X
-            for epoch in range(nb_epoch):
+            for _ in range(nb_epoch):
                 if x_train.shape[0] > batch_size:
                     for (batch_start, batch_end) in batches:
                         weights_before_training = get_server_weights(self.master_url)

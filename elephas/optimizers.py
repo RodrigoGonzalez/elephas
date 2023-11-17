@@ -50,7 +50,7 @@ class Optimizer(object):
     def get_gradients(self, grads, params):
 
         if hasattr(self, 'clipnorm') and self.clipnorm > 0:
-            norm = K.sqrt(sum([K.sum(g ** 2) for g in grads]))
+            norm = K.sqrt(sum(K.sum(g ** 2) for g in grads))
             grads = [clip_norm(g, self.clipnorm, norm) for g in grads]
 
         if hasattr(self, 'clipvalue') and self.clipvalue > 0:
@@ -82,10 +82,7 @@ class SGD(Optimizer):
         for p, g, c in zip(params, grads, constraints):
             m = np.zeros_like(p)  # momentum
             v = self.momentum * m - lr * g  # velocity
-            if self.nesterov:
-                new_p = p + self.momentum * v - lr * g
-            else:
-                new_p = p + v
+            new_p = p + self.momentum * v - lr * g if self.nesterov else p + v
             new_weights.append(c(new_p))
 
         return new_weights
